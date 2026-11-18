@@ -1,85 +1,70 @@
-# ReceiptLedger
+# ReceiptLedger — MP2107 통합 구현
 
-영수증 사진에서 지출 정보를 추출하고 기기 내부에 저장하는 가계부 앱입니다. 영수증이 없는 지출은 직접 입력할 수 있으며, 저장된 내역을 조회하거나 월별 통계와 CSV 파일로 확인할 수 있습니다.
+## 현재 검증 상태
+카메라/갤러리 입력, 권한 거절 안내, 온디바이스 OCR, 결과·처리 시간 표시, 자동 분석 이력 저장·목록·삭제, 텍스트 공유, 가계부·통계·CSV 구현.
+2026-11-18: TypeScript 의미 검사 오류 0건, Node 테스트 32개 통과. 네이티브 Android 빌드 성공, 실기기 조작, 비행기 모드 OCR, 시스템 공유 시트는 아직 확인하지 않았습니다. screenshots의 실제 증거와 아래 측정표를 채우기 전에는 제출 준비 완료가 아닙니다.
 
-별도 서버와 계정 없이 동작하는 구조입니다. 문자 인식에는 기기에 포함한 한국어 OCR 모델을 사용하고, 정보 추출과 카테고리 제안은 규칙 기반으로 처리합니다.
+## 실행 절차
+Windows CMD에서 압축을 푼 앱 소스 디렉터리로 이동합니다. MP별 ZIP에서는 app 디렉터리입니다. 명령 앞의 프롬프트 경로나 실행 로그를 복사하지 마세요.
 
-## 주요 기능
-
-- 영수증 사진의 사용처·결제일·총액 추출
-- 인식 결과 확인·수정 및 지출 직접 입력
-- 지출·품목 저장, 조회, 수정, 삭제
-- 기간·카테고리별 조회 및 월별 통계
-- CSV 생성 및 OS 공유 연동
-- 분석 취소·시간 초과 처리, 임시 이미지 정리
-
-현재 `examples/IntegrationScreen.tsx`에서 기능 연결을 확인할 수 있습니다. 최종 UI와 실기기 검증은 진행 예정입니다. 품목 자동 추출은 명확한 3열 형식을 대상으로 하며, 인식 결과는 저장 전에 사용자가 확인합니다.
-
-## 기술 스택
-
-| 구분 | 사용 기술 |
-|---|---|
-| 앱 | React Native, TypeScript, Expo SDK 55 |
-| 문자 인식 | Google ML Kit 한국어 Text Recognition |
-| 네이티브 연결 | Kotlin, Expo Modules API |
-| 데이터 저장 | SQLite (`expo-sqlite`) |
-| 정보 추출·분류 | 문자열 분석 및 키워드 규칙 |
-| 테스트 | Node.js Test Runner, tsx, SQLite |
-
-## 개발 환경
-
-- Android 10(API 29) 이상
-- Node.js 24 기준
-- Android Studio, Android SDK, JDK 17
-- Android 에뮬레이터 또는 USB 디버깅이 활성화된 Android 기기
-
-현재 Android를 대상으로 구성되어 있습니다. 커스텀 OCR 모듈을 사용하므로 Expo Go로 실행할 수 없으며, 웹 및 iOS 연결은 포함되어 있지 않습니다.
-
-## 설치 및 실행
-
-저장소를 내려받은 뒤 `package.json`이 있는 폴더에서 실행합니다. Android SDK의 `ANDROID_HOME`과 `platform-tools` 경로를 먼저 설정합니다.
-
-```powershell
-npm ci
-npm run android
+```bat
+set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
+npm.cmd ci
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run android -- --device
 ```
 
-`npm run android`는 Android 프로젝트 생성과 앱 빌드를 진행합니다. 최초 패키지 설치와 Gradle 빌드에는 인터넷이 필요합니다. 개발 빌드는 Metro 연결을 사용합니다.
+기기 목록에서 Medium_Phone_API_36.1을 선택합니다. emulator-5556 같은 ADB ID 대신 대화형 선택을 사용합니다. npm이 무응답이면 프로젝트 폴더에 0바이트 npm.cmd 파일이 있는지 확인하고 제거/이름 변경하세요. 설치 시 Gradle 9와 호환되지 않는 Foojay 0.5.0 선언은 postinstall에서 1.0.0으로 수정합니다.
+SDK 경로 오류가 계속되면 android/local.properties에 자신의 경로를 슬래시로 입력합니다: sdk.dir=C:/Users/kmp05/AppData/Local/Android/Sdk. 이 기기별 파일은 제출하지 않습니다.
 
-## 테스트
-
-```powershell
-npm run typecheck
-npm test
+오프라인 시험용 release 빌드:
+```bat
+set "LEDGER_OFFLINE_RELEASE=1"
+npx.cmd expo prebuild --platform android
+npx.cmd expo run:android --variant release --device
 ```
+기존 android 프로젝트가 있다면 plugin 변경 사항이 반영되도록 prebuild를 실행합니다. 비행기 모드 후 Wi-Fi도 끄고 앱을 완전히 종료/재실행하여 촬영 또는 갤러리 OCR을 시험합니다. Expo Go는 커스텀 네이티브 OCR 모듈을 포함하지 않아 사용할 수 없습니다.
 
-타입 검사와 자동 테스트는 Android 기기 없이 실행할 수 있습니다. 테스트 범위와 실기기 확인 항목은 [검증 기록](docs/TEST_RESULTS.md)에 정리되어 있습니다.
+## 버전 및 실행 기기
+- Expo 55.0.32 / React Native 0.83.10 / React 19.2.0 / TypeScript 5.9.3
+- expo-camera 55.0.23 / expo-image-picker 55.0.24 / expo-sqlite 55.0.20
+- ML Kit bundled Korean text-recognition-korean 16.0.1 (모델 포함)
+- 사용자 로그: Node 24.11.0, JDK 21.0.9, Gradle 9.0.0, compile/target SDK 36, min SDK 29
+- 선택한 에뮬레이터: Medium_Phone_API_36.1. 실제 OS/API는 Android 설정에서 확인해 아래 실행 기록에 입력해야 합니다.
+- 공지의 권장/필수 버전표는 작은 이미지로 정확히 판독되지 않았으므로 버전 규정 충족은 미확인입니다. 현재 설치한 버전을 고정한 lockfile을 제공합니다.
 
-## 프로젝트 구성
+## 권한 처리와 예외
+홈 → 지출 등록 → 카메라 열기 / 사진 선택이 별도 진입점입니다. 카메라는 필요 이유를 표시하고 권한 요청, 거절 안내, 다시 요청 또는 설정 이동을 제공합니다. 갤러리는 시스템 사진 선택기를 사용하므로 OS 버전에 따라 전체 사진 권한 대화상자가 표시되지 않을 수 있습니다. 선택 취소는 기존 화면으로 돌아옵니다. 문자가 없으면 재촬영/직접 입력 안내를 표시하고, OCR 실패/시간 초과/취소 시 임시 파일을 정리합니다.
 
-| 경로 | 역할 |
-|---|---|
-| `App.tsx`, `src/bootstrap.ts`, `src/context/` | 앱 초기화 및 서비스 연결 |
-| `src/types/`, `src/constants/`, `src/errors.ts` | 공통 타입·상수·오류 정의 |
-| `src/database/` | DB 초기화, 지출·품목 관리, 통계 집계 |
-| `src/services/` | 분석·저장·내보내기·임시 파일 처리 |
-| `src/parsers/`, `src/classifiers/` | 영수증 정보 추출 및 카테고리 제안 |
-| `src/validators/`, `src/utils/` | 입력값 검증 및 공통 처리 |
-| `modules/receipt-ocr/` | Android 한국어 OCR 모듈 |
-| `plugins/` | 백업 제외 및 오프라인 릴리스 설정 |
-| `examples/` | 기능 연결 확인 화면 |
-| `tests/` | 단위·통합 테스트 |
-| `docs/` | 연동 방법, 요구사항, 검증 및 빌드 문서 |
+## 분석 및 이력 데이터 구조
+ReceiptService가 이미지 복사부터 OCR 및 영수증 해석까지 performance.now()로 ms 단위 측정합니다. 결과 화면에 원문과 시간이 표시됩니다. 성공한 분석은 가계부 저장 여부와 별개로 analysis_history(id, text, elapsedMs, createdAt)에 저장됩니다. 원본 이미지/URI는 저장하지 않습니다. 이력 저장 실패 시 성공으로 표시하지 않고 안내합니다. 가계부는 사용자의 입력 확인 후 별도로 저장합니다.
 
-## 데이터 처리
+## 확인 방법
+모든 시험 데이터는 실명·연락처 없는 가상 영수증(테스트상점, 합계 1000원)과 글자 없는 사물/빈 종이를 사용합니다. 입력 원본 사진은 제출하지 않습니다.
 
-지출은 앱 전용 SQLite에 저장되며, OCR 결과는 사용자가 저장하기 전까지 통계에 반영되지 않습니다. 영수증 이미지를 지출 원본으로 영구 보관하지 않고, 분석에 사용한 앱 임시 복사본을 정리합니다.
+| 기준 | 입력 → 조작 → 기대 결과 | 네트워크 | 증거 파일 |
+|---|---|---|---|
+| MP1 카메라 | 가상 영수증 → 카메라 열기/촬영 → 사진 미리보기 | 온라인 또는 오프라인 | 01_camera.png |
+| MP1 갤러리 | 가상 영수증 → 사진 선택 → 미리보기 | 동일 | 02_gallery.png |
+| MP1 권한 | 권한 미허용 → 카메라 진입 → OS 요청; 거절 → 안내/설정 이동 | 동일 | 03_permission.png, 04_denied.png |
+| MP1 취소 | 사진 선택기 → 뒤로 → 크래시 없이 입력 화면 | 동일 | 실행 기록 |
+| MP2 OCR | 가상 영수증 → 분석 → 텍스트와 처리 시간 | 온라인 | 05_result.png |
+| MP2 오프라인 | release 재실행 → 같은 입력 분석 → 결과 표시 | 비행기 모드, Wi-Fi 끔 | 06_offline.png |
+| MP2 실패 | 빈 종이 → 분석 → 인식 불가 안내 | 오프라인 | 07_no_text.png |
+| MP3 이력 | 분석 성공 → 분석 이력 탭 → 텍스트 목록 | 오프라인 | 08_history.png |
+| MP3 재시작/삭제 | 앱 강제 종료/재실행 → 이력 유지; 삭제/재실행 → 해당 항목 없음 | 오프라인 | 09_restart.png, 11_deleted.png |
+| MP3 공유 | 이력의 결과 공유 → 시스템 공유 시트 → 다른 앱에 텍스트 전달 | 오프라인 가능한 대상 앱 | 10_share.png |
 
-자동 백업 제외와 릴리스 인터넷 권한 제거 설정이 포함되어 있습니다. 최종 APK에서의 적용 여부와 최초 실행 시 오프라인 동작은 실기기 검증 대상입니다. 앱 삭제·기기 초기화 시 기록이 소실될 수 있으므로 필요한 내역은 CSV로 별도 보관해야 합니다.
+## 실행 기록 및 처리 시간 측정값
+실제 측정 전입니다. 아래 빈칸은 앱 결과 화면을 보고 작성하세요. 자동 단위 테스트 시간은 OCR 기기 측정값이 아닙니다.
 
-## 관련 문서
+| 기기/실제 API | 빌드 | 입력 | 네트워크 | 처리 시간(ms) | 실제 결과 |
+|---|---|---|---|---|---|
+| 미측정 | release | 가상 영수증 | 온라인 | 미측정 | 미검증 |
+| 미측정 | release | 동일 가상 영수증 | 비행기 모드/Wi-Fi 끔 | 미측정 | 미검증 |
 
-- [프론트엔드 연동](docs/FRONTEND_HANDOFF.md)
-- [요구사항별 구현 현황](docs/REQUIREMENTS.md)
-- [검증 기록](docs/TEST_RESULTS.md)
-- [오프라인 릴리스 빌드](docs/OFFLINE_RELEASE.md)
+## 제출 점검
+screenshots 폴더의 지침대로 실제 화면 PNG/JPG를 넣습니다(각 2MB 이하, ZIP당 최대 12장). 개인정보, 테스트 원본 사진, .env 실제 키, node_modules, build, .gradle, 로컬 SDK 경로 파일은 제외합니다. 단계별 ZIP은 동일한 누적 최종 소스이며 README의 단계별 점검 범위를 구분했습니다. 단계 이전으로 기능을 되돌린 버전은 아닙니다.

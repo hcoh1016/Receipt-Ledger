@@ -9,6 +9,10 @@ import { AppError } from "../errors";
 export function whereFilter(f: ExpenseFilter) {
   const clauses: string[] = [],
     params: Param[] = [];
+  if (f.search) {
+    clauses.push('instr(lower(merchant), lower(?)) > 0');
+    params.push(f.search);
+  }
   if (f.startDate) {
     clauses.push("paid_at >= ?");
     params.push(f.startDate);

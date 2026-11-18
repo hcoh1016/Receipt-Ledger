@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SCHEMA } from "../src/database/schema";
+import { HISTORY_SCHEMA, HistoryRepository } from "../src/database/historyRepository";
 import type { SqlDatabase, Param, SqlConnection } from "../src/database/port";
 import { ExpenseRepository } from "../src/database/expenseRepository";
 import { StatisticsRepository } from "../src/database/statisticsRepository";
@@ -78,6 +79,60 @@ function setup() {
     stats: new StatisticsRepository(db),
   };
 }
+test('분석 텍스트·시간 저장, 재시작 유지, 삭제 후 재시작 유지', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'receipt-history-'));
+  const file = join(dir, 'history.db');
+  let db = new TestDB(file);
+  try {
+    await db.execAsync(HISTORY_SCHEMA);
+    const repo = new HistoryRepository(db);
+    await repo.save({id:'a',text:'테스트 상점\n합계 1000',elapsedMs:123,createdAt:'2026-11-18T00:00:00Z'});
+    await repo.save({id:'b',text:'합계 2000',elapsedMs:200,createdAt:'2026-11-18T00:00:01Z'});
+    db.close(); db = new TestDB(file);
+    const reopened = new HistoryRepository(db);
+    const rows = await reopened.list();
+    assert.deepEqual(rows.map(r=>r.id), ['b','a']);
+    assert.equal(rows[1].elapsedMs,123);
+    assert.deepEqual(Object.keys(rows[0]).sort(),['createdAt','elapsedMs','id','text']);
+    await reopened.remove('a');
+    db.close(); db = new TestDB(file);
+    assert.deepEqual((await new HistoryRepository(db).list()).map(r=>r.id), ['b']);
+  } finally { db.close(); rmSync(dir,{recursive:true,force:true}); }
+});
+test('OCR 결과에 원문·실측 시간 포함, 사진 URI 미포함', async () => {
+  const service = new ReceiptService({recognize:async()=> '테스트\n합계 1000',cancel:()=>{}}, {createCopy:async()=> 'cache://copy',remove:async()=>{}},()=> 'analysis-id');
+  const result = await service.analyze('private://original');
+  assert.equal(result.text,'테스트\n합계 1000');
+  assert.ok(Number.isInteger(result.elapsedMs) && result.elapsedMs >= 0);
+  assert.equal(result.id,'analysis-id');
+  assert.ok(!JSON.stringify(result).includes('private://'));
+});
+test('사용처 검색과 날짜·카테고리 조건 및 CSV 대상 일치', async()=>{
+  const {db,service}=setup();
+  try {
+    await service.save(input({merchant:'서울 카페',category:'카페·간식',total:4500}),'search-a');
+    await service.save(input({merchant:'서울 식당',category:'식비',total:9000}),'search-b');
+    await service.save(input({merchant:'부산 카페',category:'카페·간식',total:5500}),'search-c');
+    const rows=await service.list({search:'  서울  ',startDate:'2026-11-01',endDate:'2026-11-30',category:'카페·간식'});
+    assert.equal(rows.length,1);assert.equal(rows[0].total,4500);
+    const csv=toCsv(rows);assert.ok(csv.includes('서울 카페'));assert.ok(!csv.includes('서울 식당'));assert.ok(!csv.includes('부산 카페'));
+  } finally {db.close();}
+});
+test('검색의 %, _, 따옴표는 SQL 패턴이나 명령이 아닌 문자',async()=>{
+  const {db,service}=setup();
+  try {
+    await service.save(input({merchant:'100%_가게'}),'literal-a');
+    await service.save(input({merchant:'일반 가게'}),'literal-b');
+    assert.equal((await service.list({search:'%_'})).length,1);
+    assert.equal((await service.list({search:"' OR 1=1 --"})).length,0);
+    assert.equal((await service.list({search:'   '})).length,2);
+    assert.throws(()=>service.list({search:'a'.repeat(101)}));
+  } finally {db.close();}
+});
+test('영문 사용처 검색은 대소문자를 구분하지 않음',async()=>{
+  const {db,service}=setup();
+  try {await service.save(input({merchant:'Coffee Shop'}),'case-a');assert.equal((await service.list({search:'COFFEE'})).length,1);}finally{db.close();}
+});
 for (const amount of [0, -1, 1.5, 1e9, NaN, Infinity])
   test(`금액 차단 ${amount}`, () =>
     assert.throws(() => validateExpense(input({ total: amount }))));

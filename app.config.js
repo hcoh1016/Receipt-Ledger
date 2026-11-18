@@ -11,6 +11,7 @@ module.exports = {
       blockedPermissions: ["android.permission.RECORD_AUDIO"],
     },
     plugins: [
+      ["expo-camera", {cameraPermission:"영수증 촬영에 카메라를 사용합니다.",recordAudioAndroid:false}],
       ["expo-build-properties", { android: { minSdkVersion: 29 } }],
       [
         "expo-image-picker",

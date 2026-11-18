@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import type { SqlDatabase } from "./port";
+import { HISTORY_SCHEMA } from './historyRepository';
 import { SCHEMA } from "./schema";
 let ready: Promise<SqlDatabase> | undefined;
 export function openDatabase(): Promise<SqlDatabase> {
@@ -18,6 +19,7 @@ export function openDatabase(): Promise<SqlDatabase> {
         await db.withExclusiveTransactionAsync(async (tx) => {
           await tx.execAsync(SCHEMA);
         });
+      await db.execAsync(HISTORY_SCHEMA);
       return db;
     })().catch((e) => {
       ready = undefined;

@@ -1,0 +1,25 @@
+appId: com.receiptledger.app
+---
+- launchApp
+- tapOn:
+    id: "tab-home"
+- tapOn:
+    id: "add-expense"
+- tapOn:
+    id: "receipt-manual"
+- tapOn:
+    id: "expense-total"
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "expense-save"
+    direction: DOWN
+- tapOn:
+    id: "expense-save"
+- assertVisible: "입력값을 확인해 주세요."
+- scrollUntilVisible:
+    element:
+      text: "총액은 1~999,999,999원의 정수여야 합니다."
+    direction: DOWN
+- assertVisible: "총액은 1~999,999,999원의 정수여야 합니다."

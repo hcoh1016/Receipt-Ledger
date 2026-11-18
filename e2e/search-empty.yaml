@@ -1,0 +1,23 @@
+appId: com.receiptledger.app
+---
+- launchApp
+- tapOn:
+    id: "tab-list"
+- tapOn:
+    id: "filter-search"
+- inputText: "NO_MATCH_RECEIPT_2371244"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "filter-apply"
+    direction: DOWN
+- tapOn:
+    id: "filter-apply"
+- scrollUntilVisible:
+    element:
+      text: "조회된 지출이 없어요"
+    direction: DOWN
+- assertVisible: "조회된 지출이 없어요"
+- tapOn:
+    id: "tab-export"
+- assertVisible: ".*NO_MATCH_RECEIPT_2371244.*"

@@ -1,0 +1,21 @@
+appId: com.receiptledger.app
+---
+- launchApp
+- tapOn:
+    id: "add-expense"
+- tapOn:
+    id: "receipt-manual"
+- tapOn:
+    id: "expense-total"
+- inputText: "8000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "expense-save"
+    direction: DOWN
+- tapOn:
+    id: "expense-save"
+- assertVisible: "지출 내역"
+- tapOn:
+    id: "tab-statistics"
+- assertVisible: "한눈에 보는 소비"

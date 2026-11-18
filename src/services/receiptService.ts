@@ -19,6 +19,7 @@ export class ReceiptService {
     if (signal?.aborted)
       throw new AppError("CANCELLED", "분석을 취소했습니다.");
     this.busy = true;
+    const started = performance.now();
     let owned: string | undefined,
       timer: ReturnType<typeof setTimeout> | undefined;
     const id = this.uuid();
@@ -62,7 +63,7 @@ export class ReceiptService {
           "NO_TEXT",
           "글자를 찾지 못했습니다. 다시 촬영하거나 직접 입력해 주세요.",
         );
-      return parseReceipt(text);
+      return { ...parseReceipt(text), text, elapsedMs: Math.round(performance.now() - started), id, createdAt: new Date().toISOString() };
     } catch (e) {
       if (e instanceof AppError) throw e;
       throw new AppError(

@@ -50,6 +50,8 @@ export function validateExpense(input: ExpenseInput): ExpenseInput {
 }
 export function validateFilter(f: ExpenseFilter): ExpenseFilter {
   const errors: Record<string, string> = {};
+  if (f.search !== undefined && (typeof f.search !== 'string' || f.search.trim().length > 100))
+    errors.search = '사용처 검색어는 100자 이내로 입력해 주세요.';
   if (f.startDate && !isDate(f.startDate))
     errors.startDate = "시작일을 확인해 주세요.";
   if (f.endDate && !isDate(f.endDate))
@@ -60,7 +62,7 @@ export function validateFilter(f: ExpenseFilter): ExpenseFilter {
     errors.category = "카테고리를 확인해 주세요.";
   if (Object.keys(errors).length)
     throw new AppError("VALIDATION", "조회 조건을 확인해 주세요.", errors);
-  return f;
+  return {...f, search:f.search?.trim() || undefined};
 }
 // 프론트의 빈 문자열을 Number('')로 바꾸면 0이 되므로 이 함수를 사용한다.
 export function parseAmountInput(value: string): number {

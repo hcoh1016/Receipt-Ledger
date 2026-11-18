@@ -18,6 +18,7 @@ export interface Expense extends ExpenseInput {
   updatedAt: string;
 }
 export interface ExpenseFilter {
+  search?: string;
   startDate?: string;
   endDate?: string;
   category?: Category;
